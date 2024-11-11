@@ -106,7 +106,7 @@ class Snake(GameObject):
         self.length = self.length_default
         self.direction = RIGHT
         # Это нельзя убрать, иначе автотесты не пропустят.
-        self.next_direction = None 
+        self.next_direction = None
         self.body_color = SNAKE_COLOR
 
     def draw(self):
