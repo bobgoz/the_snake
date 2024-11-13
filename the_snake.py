@@ -1,4 +1,4 @@
-from random import randint
+from random import randint, choice
 import time
 
 import pygame as pg
@@ -8,6 +8,10 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+
+CENTRAL_POSITION = (
+    GRID_WIDTH // 2 * GRID_SIZE,
+    GRID_HEIGHT // 2 * GRID_SIZE)
 
 UP = (0, -1)
 DOWN = (0, 1)
@@ -51,28 +55,36 @@ def handle_keys(game_object):
 class GameObject:
     """Родительский класс объектов"""
 
-    def __init__(self):
+    def __init__(self, positions=None, body_color=None):
         """Инициализация атрибутов"""
         self.position = None
-        self.body_color = None
+        self.positions = positions
+        self.body_color = body_color
 
     def draw(self):
-        """Метод отрисовки для производных объектов"""
-        rect = pg.Rect(self.positions, (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, self.body_color, rect)
-        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+        """
+        Метод отрисовки для производных классов.
+        Необходимо переопределить.
+        """
+        raise NotImplementedError(
+            'Необходимо переопределить метод'
+            f'в классe {self.__class__.__name__}.'
+        )
 
 
 class Apple(GameObject):
     """Класс яблока"""
 
-    def __init__(self):
+    def __init__(self, position=None, body_color=None):
         """Инициализация атрибутов"""
-        super().__init__()
-        self.body_color = APPLE_COLOR
-        self.positions = (
-            GRID_WIDTH // 2 * GRID_SIZE,
-            GRID_HEIGHT // 2 * GRID_SIZE)
+        super().__init__(position, body_color)
+        self.position = position
+
+    def draw(self):
+        """Метод отрисовки для яблока"""
+        rect = pg.Rect(self.position, (GRID_SIZE, GRID_SIZE))
+        pg.draw.rect(screen, self.body_color, rect)
+        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
     def randomize_position(self, *args):
         """
@@ -83,44 +95,36 @@ class Apple(GameObject):
         # В цикле перебираются координаты, чтобы
         #  яблоко не появлялось внутри объектов.
         while True:
-            RANDOM_POSITION = (
+            random_position = (
                 randint(0, GRID_WIDTH - 1) * (GRID_SIZE),
-                randint(0, GRID_HEIGHT - 1) * GRID_SIZE,
-            )
-            if RANDOM_POSITION not in args:
+                randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
+            if random_position not in args:
                 break
-        self.positions = RANDOM_POSITION
+        self.position = random_position
 
 
 class Snake(GameObject):
     """Класс змейки"""
 
-    def __init__(self):
+    def __init__(self, positions=None, body_color=None):
         """Инициализация атрибутов"""
-        super().__init__()
-        # Хранение позиций элементов змейки
-        self.positions = [(
-            GRID_WIDTH // 2 * GRID_SIZE,
-            GRID_HEIGHT // 2 * GRID_SIZE)]
-        self.length_default = 1
-        self.length = self.length_default
+        super().__init__(positions, body_color)
+        self.position = None
+        self.length = self.reset()
         self.direction = RIGHT
         # Это нельзя убрать, иначе автотесты не пропустят.
         self.next_direction = None
-        self.body_color = SNAKE_COLOR
+        # Если не инициализировать этот атрибут,
+        # то методы класса будут некорректно
+        # использовать атрибут родительского класса.
+        self.positions = positions
 
     def draw(self):
         """Рисует змейку."""
-        # Отрисовка головы змейки
-        head_rect = pg.Rect(self.positions[0], (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, self.body_color, head_rect)
-        pg.draw.rect(screen, BORDER_COLOR, head_rect, 1)
-
-        for position in self.positions[:-1]:
+        for position in self.positions:
             rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
             pg.draw.rect(screen, self.body_color, rect)
             pg.draw.rect(screen, BORDER_COLOR, rect, 1)
-            self.delete_part()
 
     def delete_part(self):
         """Удаление лишних частей змейки."""
@@ -131,13 +135,12 @@ class Snake(GameObject):
         """Получение координаты головы змейки."""
         return self.positions[0]
 
-    def reset(self, apple):
+    def reset(self):
         """Сбрасывает змейку."""
-        self.positions = [(
-            GRID_WIDTH // 2 * GRID_SIZE,
-            GRID_HEIGHT // 2 * GRID_SIZE)]
-        self.length = self.length_default
-        self.direction = RIGHT
+        self.positions = [CENTRAL_POSITION]
+        self.direction = choice([UP, RIGHT, DOWN, LEFT])
+        self.length = 1
+        return self.length
 
     def move(self):
         """Движение змейки."""
@@ -149,11 +152,12 @@ class Snake(GameObject):
             (head_y + self.direction[1] * GRID_SIZE) % SCREEN_HEIGHT)
 
         self.positions.insert(0, new_pos)
+        # Лишние части списка удаляются
         self.delete_part()
 
     def eat(self, apple):
         """Если змейка съела яблоко."""
-        if self.get_head_position() == apple.positions:
+        if self.get_head_position() == apple.position:
             self.length += 1
             return True
 
@@ -175,8 +179,10 @@ def main():
     """Основной цикл игры."""
     pg.init()
 
-    snake = Snake()
-    apple = Apple()
+    snake = Snake([CENTRAL_POSITION], body_color=SNAKE_COLOR)
+    apple = Apple(position=((
+        randint(0, GRID_WIDTH - 1) * GRID_SIZE,
+        randint(0, GRID_HEIGHT - 1) * GRID_SIZE)), body_color=APPLE_COLOR)
 
     # Основной цикл игры.
     while True:
@@ -186,7 +192,7 @@ def main():
         if snake.eat(apple):
             apple.randomize_position(snake)
         if snake.check_bite():
-            snake.reset(apple)
+            snake.reset()
             apple.randomize_position(snake)
         snake.draw()
         apple.draw()
