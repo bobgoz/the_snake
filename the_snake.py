@@ -109,8 +109,9 @@ class Snake(GameObject):
     def __init__(self, positions=None, body_color=None):
         """Инициализация атрибутов"""
         super().__init__(positions, body_color)
+        # Эта функция возвращает self.length
+        self.reset()
         self.position = None
-        self.length = self.reset()
         self.direction = RIGHT
         # Это нельзя убрать, иначе автотесты не пропустят.
         self.next_direction = None
