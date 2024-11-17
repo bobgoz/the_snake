@@ -59,7 +59,7 @@ def handle_keys(game_object):
 class GameObject:
     """Родительский класс объектов"""
 
-    def __init__(self, body_color=APPLE_COLOR, position=CENTRAL_POSITION):
+    def __init__(self, body_color=None, position=CENTRAL_POSITION):
         """Инициализация атрибутов"""
         self.position = position
         self.body_color = body_color
