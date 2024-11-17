@@ -59,7 +59,7 @@ def handle_keys(game_object):
 class GameObject:
     """Родительский класс объектов"""
 
-    def __init__(self, position=CENTRAL_POSITION, body_color=APPLE_COLOR):
+    def __init__(self, body_color=APPLE_COLOR, position=CENTRAL_POSITION):
         """Инициализация атрибутов"""
         self.position = position
         self.body_color = body_color
@@ -84,18 +84,15 @@ class GameObject:
 class Apple(GameObject):
     """Класс яблока"""
 
-    def __init__(self, occupied_positions=None):
+    def __init__(self, occupied_positions=None, body_color=APPLE_COLOR):
         """Инициализация атрибутов"""
-        if occupied_positions is None:
-            occupied_positions = []
-        super().__init__()
-        self.randomize_position(occupied_positions)
+        super().__init__(body_color)
 
     def draw(self):
         """Метод отрисовки для яблока"""
         self.draw_cell(self.position, self.body_color)
 
-    def randomize_position(self, positions):
+    def randomize_position(self, positions=[]):
         """
         Меняет позицию яблока на рандомную,
         в аргументах указываются ссылки на
@@ -103,7 +100,6 @@ class Apple(GameObject):
         """
         # В цикле перебираются координаты, чтобы
         #  яблоко не появлялось внутри объектов.
-
         while True:
             random_position = (
                 randint(0, GRID_WIDTH - 1) * (GRID_SIZE),
@@ -118,11 +114,20 @@ class Snake(GameObject):
 
     def __init__(self, body_color=SNAKE_COLOR):
         """Инициализация атрибутов"""
-        super().__init__()
+        super().__init__(body_color)
         # Инициализирует атрибуты, которые
         #  имеют значение по умолчанию.
-        self.reset()
-        self.body_color = body_color
+        self.reset(is_initial=False)
+
+    def reset(self, is_initial=True):
+        """Сбрасывает змейку."""
+        if is_initial is False:
+            self.direction = RIGHT
+        else:
+            self.direction = choice([UP, RIGHT, DOWN, LEFT])
+        self.length = 1
+        self.next_direction = None
+        self.positions = [self.position]
 
     def draw(self):
         """Рисует змейку."""
@@ -137,16 +142,6 @@ class Snake(GameObject):
     def get_head_position(self):
         """Получение координаты головы змейки."""
         return self.positions[0]
-
-    def reset(self, in_initial=True):
-        """Сбрасывает змейку."""
-        self.positions = [self.position]
-        if in_initial is True:
-            self.direction = RIGHT
-        else:
-            self.direction = choice([UP, RIGHT, DOWN, LEFT])
-        self.length = 1
-        self.next_direction = None
 
     def move(self):
         """Движение змейки."""
@@ -187,17 +182,19 @@ def main():
     snake = Snake()
     apple = Apple()
 
+    apple.randomize_position()
+
     # Основной цикл игры.
     while True:
         clock.tick(SPEED)
         handle_keys(snake)
         snake.update_direction()
+        snake.move()
         if snake.eat(apple):
             apple.randomize_position(snake.position)
         if snake.check_bite():
-            snake.reset(in_initial=False)
+            snake.reset()
             apple.randomize_position(snake.position)
-        snake.move()
         apple.draw()
         snake.draw()
         pg.display.update()
