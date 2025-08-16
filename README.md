@@ -5,4 +5,8 @@
 
 # Запуск проекта:
 Клонируйте репозиторий. 
+```
+git clone https://github.com/bobgoz/the_snake.git
+```
+
 
